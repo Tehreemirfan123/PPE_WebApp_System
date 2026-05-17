@@ -1,0 +1,53 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Streamlit logs & cache
+.streamlit/
+streamlit_log.txt
+
+# Virtual Environments (Python)
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Secrets (CRITICAL - DO NOT UPLOAD!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Video Source and Raw Media
+ml_pipeline/test_videos/*.mp4
+ml_pipeline/test_videos/*.avi
+*.mp4
+*.avi
+*.mov
+# Exempt the essential demo video so it is committed for FYP testing:
+!ml_pipeline/test_videos/demo.mp4
+
+# Local Saved Violations Outputs
+saved_violations/
+saved_violations_dir/
+saved_violations/*
+
+# Testing & IDE Caches
+.pytest_cache/
+.DS_Store
+Thumbs.db
+
+# Exclude local academic files, old tests, and draft reports (User Exclusions)
+DEDUPLICATION_SUMMARY.py
+DEDUPLICATION_GUIDE.md
+TEST_REPORT.py
+Thesis_Final_Converted.md
+system_audit.py
+realtime_app.py
+test_api.py
+comprehensive_test.py
+README_rough.md

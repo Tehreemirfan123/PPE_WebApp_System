@@ -1,0 +1,30 @@
+# ── Models ─────────────────────────────────────────────────────────────────────
+person_model:   models/yolov8n.pt
+ppe_model:      ml_pipeline/models/ppe_yolov8m_best.pt
+
+# ── Confidence Thresholds ──────────────────────────────────────────────────────
+person_conf:    0.5           # minimum confidence for person detection
+ppe_conf:       0.5           # minimum confidence to accept a PPE detection
+alert_conf:     0.6           # minimum confidence to trigger a violation alert
+
+# ── Temporal Smoothing & Cooldown ──────────────────────────────────────────────
+temporal_frames: 5            # violation must persist for N frames before logging
+cooldown_seconds: 15          # wait N seconds before logging the exact same violation again
+auto_detect_site: true        # infer site type (Chemical Lab/Factory) from detections
+
+# ── Backend API ────────────────────────────────────────────────────────────────
+api_base_url:   http://127.0.0.1:8000
+api_email:      admin@ppe.com
+api_password:   admin123
+
+# ── Camera / Site Info ─────────────────────────────────────────────────────────
+site_name:      "Construction Site"
+camera_name:    "Camera 1"
+
+# ── Video Sources ──────────────────────────────────────────────────────────────
+video_source:   "ml_pipeline/test_videos/demo.mp4"
+
+# ── Output ─────────────────────────────────────────────────────────────────────
+saved_violations_dir: ./saved_violations  # Relative to the script running dir (root)
+show_display:   true          # show OpenCV window during testing
+skip_frames:    4             # process every Nth frame to achieve real-time speed

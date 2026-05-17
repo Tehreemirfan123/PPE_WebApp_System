@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ppe_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ppe_system
+      POSTGRES_USER: ppe_user
+      POSTGRES_PASSWORD: ppe_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/001_init_schema.sql:/docker-entrypoint-initdb.d/001_init_schema.sql
+      - ./database/002_seed_defaults.sql:/docker-entrypoint-initdb.d/002_seed_defaults.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ppe_user -d ppe_system" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
