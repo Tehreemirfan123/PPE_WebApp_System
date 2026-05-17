@@ -1,0 +1,125 @@
+"""
+Violations Logs Page — Filterable table + image viewer + resolve button
+"""
+
+import streamlit as st
+import pandas as pd
+from datetime import date, timedelta
+from utils import api_client
+import requests
+
+
+def render():
+    st.markdown("## ⚠️Violations Logs")
+    st.markdown("Browse detected PPE violations")
+
+    # ── Filters ───────────────────────────────────────────────────────────────
+    with st.expander("🔍 Filters", expanded=True):
+        f1, f2, f3, f4, f5 = st.columns(5)
+
+        # Populate site options
+        try:
+            sites = api_client.get_sites()
+            site_names = [s["name"] for s in sites]
+        except:
+            site_names = []
+
+        with f1:
+            sel_site   = st.selectbox("Site", ["All"] + site_names)
+        with f2:
+            sel_status = st.selectbox("Status", ["All", "open", "resolved"])
+        with f3:
+            date_from = st.date_input("From", value=date.today() - timedelta(days=30))
+        with f4:
+            date_to   = st.date_input("To",   value=date.today())
+        with f5:
+            st.markdown("<br>", unsafe_allow_html=True)
+            refresh_btn = st.button("🔄 Refresh", use_container_width=True)
+
+    site_name = sel_site if sel_site != "All" else None
+    status    = sel_status if sel_status != "All" else None
+
+    # ── Fetch Violations ──────────────────────────────────────────────────────
+    try:
+        violations = api_client.get_violations(
+            site_name=site_name, status=status,
+            date_from=date_from, date_to=date_to,
+        )
+    except Exception as e:
+        st.error(f"Failed to load violations: {e}")
+        return
+
+    if not violations:
+        st.info("✅ No violations found for the selected filters.")
+        return
+
+    st.markdown(f"**{len(violations)} violation(s) found**")
+    st.markdown("---")
+
+    # ── Violation Cards ───────────────────────────────────────────────────────
+    for v in violations:
+        status_badge = (
+            '<span class="badge-open">Open</span>'
+            if v["status"] == "open"
+            else '<span class="badge-resolved">Resolved</span>'
+        )
+        site_name   = v.get("site_name")   or "—"
+        cam_name    = v.get("camera_name") or "—"
+        worker_name = v.get("worker_name") or "Unknown Worker"
+        ts          = v["timestamp"][:19].replace("T", " ")
+
+        with st.container():
+            img_col, info_col = st.columns([1, 2])
+
+            with img_col:
+                img_path = v.get("image_path")
+                if img_path:
+                    # Try loading from API static endpoint
+                    filename = img_path.split("/")[-1].split("\\")[-1]
+                    img_url  = f"http://localhost:8000/images/{filename}"
+                    try:
+                        resp = requests.get(img_url, timeout=5)
+                        if resp.status_code == 200:
+                            st.image(resp.content, use_column_width=True, caption="Violation Frame")
+                        else:
+                            st.image("https://via.placeholder.com/300x200?text=No+Image", use_column_width=True)
+                    except:
+                        st.image("https://via.placeholder.com/300x200?text=No+Image", use_column_width=True)
+                else:
+                    st.markdown("""
+                    <div style='height:150px;background:#334155;border-radius:8px;
+                                display:flex;align-items:center;justify-content:center;
+                                color:#64748b;font-size:0.85rem;'>
+                        No image saved
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            with info_col:
+                st.markdown(f"""
+                **Violation #{v['id']}** &nbsp; {status_badge}
+
+                | Field | Value |
+                |---|---|
+                | 🔴 Missing PPE | `{v['missing_item']}` |
+                | 👷 Worker | {worker_name} |
+                | 🏗️ Site | {site_name} |
+                | 📷 Camera | {cam_name} |
+                | 🕐 Timestamp | {ts} |
+                | 📊 Confidence | {f"{v['confidence_score']:.2%}" if v.get('confidence_score') else '—'} |
+                """, unsafe_allow_html=True)
+
+                if v["status"] == "open":
+                    if st.button(f"✅ Mark Resolved", key=f"resolve_{v['id']}"):
+                        try:
+                            api_client.resolve_violation(v["id"])
+                            st.success("Violation marked as resolved!")
+                            st.rerun()
+                        except Exception as ex:
+                            st.error(f"Failed to resolve: {ex}")
+                else:
+                    resolved_at = v.get("resolved_at", "")
+                    if resolved_at:
+                        resolved_at = resolved_at[:19].replace("T", " ")
+                    st.success(f"Resolved at {resolved_at}")
+
+        st.markdown("---")
