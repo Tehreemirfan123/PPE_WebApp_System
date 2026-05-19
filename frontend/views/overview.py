@@ -53,7 +53,7 @@ def render():
             margin=dict(t=20, b=20, l=20, r=20),
             height=320,
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, width="stretch")
 
     with col_gauge:
         st.markdown("#### Compliance Rate")
@@ -78,7 +78,7 @@ def render():
             paper_bgcolor="#1e293b", font=dict(color="#e2e8f0"),
             margin=dict(t=20, b=20, l=30, r=30), height=320,
         )
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        st.plotly_chart(fig_gauge, width="stretch")
 
     # ── Site Breakdown Table ──────────────────────────────────────────────────
     if stats["by_site"]:
@@ -87,4 +87,4 @@ def render():
         df = pd.DataFrame(stats["by_site"])
         df.columns = ["Site", "Violations"]
         df["Share"] = (df["Violations"] / df["Violations"].sum() * 100).round(1).astype(str) + "%"
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(df, width="stretch", hide_index=True)

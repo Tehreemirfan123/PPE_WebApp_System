@@ -31,6 +31,9 @@ ml_pipeline/test_videos/*.avi
 # Exempt the essential demo video so it is committed for FYP testing:
 !ml_pipeline/test_videos/demo.mp4
 
+# OpenVINO model weights (large binary files)
+ml_pipeline/models/**/*.bin
+
 # Local Saved Violations Outputs
 saved_violations/
 saved_violations_dir/

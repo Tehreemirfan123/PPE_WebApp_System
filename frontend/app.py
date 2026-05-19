@@ -102,7 +102,7 @@ def show_login():
         with st.form("login_form"):
             email    = st.text_input("Email Address", placeholder="admin@ppe.com")
             password = st.text_input("Password", type="password", placeholder="••••••••")
-            submit   = st.form_submit_button("Sign In", use_container_width=True, type="primary")
+            submit   = st.form_submit_button("Sign In", width="stretch", type="primary")
 
         if submit:
             if not email or not password:
@@ -151,7 +151,7 @@ def show_sidebar() -> str:
         page = st.radio("Navigation", nav_options, label_visibility="collapsed")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", width="stretch"):
             for key in ["token", "role", "full_name", "logged_in"]:
                 st.session_state[key] = None if key != "logged_in" else False
             st.rerun()

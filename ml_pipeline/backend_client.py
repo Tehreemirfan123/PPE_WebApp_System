@@ -100,8 +100,8 @@ class BackendClient:
             # Deduplicate items to avoid posting identical violations twice in the same event
             unique_missing = list(set(missing_items))
             for item in unique_missing:
-                # Remove "no " prefix if it exists to match the database expected value
-                clean_item = item.replace("no ", "") if item.startswith("no ") else item
+                # Remove "no_" prefix if it exists to get the clean item name for the DB
+                clean_item = item[3:] if item.startswith("no_") else item
                 
                 violation_payload = {
                     "event_id": event_id,
