@@ -2,12 +2,21 @@
 Violations Logs Page — Filterable table + image viewer + resolve button
 """
 
+import sys
+import os
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
-from utils import api_client
 import requests
 import base64
+
+# Fix import paths
+_frontend_dir = os.path.dirname(os.path.abspath(__file__))
+_frontend_parent = os.path.dirname(_frontend_dir)
+if _frontend_parent not in sys.path:
+    sys.path.insert(0, _frontend_parent)
+
+from utils import api_client
 
 def handle_resolve_violation(violation_id):
     """Callback function to handle API resolution logic before page re-rendering."""

@@ -24,7 +24,11 @@ cooldown_seconds: 15
 auto_detect_site: true
 
 # ── Backend API ────────────────────────────────────────────────────────────────
+<<<<<<< HEAD
 api_base_url:   https://Tehreem786Irfan-ppe-backend-api.hf.space
+=======
+api_base_url:   http://127.0.0.1:8000
+>>>>>>> 757e645d77df9666317f4b32dd68ba7ef137265d
 api_email:      admin@ppe.com
 api_password:   admin123
 

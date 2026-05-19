@@ -2,6 +2,14 @@
 Streamlit Main App — Login Gate + Role-Based Navigation
 """
 
+import sys
+import os
+
+# Fix import path for Streamlit Cloud
+_frontend_dir = os.path.dirname(os.path.abspath(__file__))
+if _frontend_dir not in sys.path:
+    sys.path.insert(0, _frontend_dir)
+
 import streamlit as st
 from utils import api_client
 

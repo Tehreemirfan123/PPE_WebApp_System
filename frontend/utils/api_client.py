@@ -6,10 +6,22 @@ Every call attaches the JWT from st.session_state["token"].
 import requests
 import streamlit as st
 from typing import Optional, Dict, Any
-
 import os
 
-BASE_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000").rstrip("/")
+# Handle environment variable with fallback
+BASE_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000")
+if not BASE_URL:
+    # If empty string, use default
+    BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = BASE_URL.rstrip("/")
+
+# Debug: log the URL being used (visible in Streamlit logs)
+if not os.getenv("BACKEND_API_URL"):
+    import warnings
+    warnings.warn(
+        "BACKEND_API_URL environment variable not set. Using default: " + BASE_URL,
+        RuntimeWarning
+    )
 
 
 # ─────────────────────────────────────────────────────────────

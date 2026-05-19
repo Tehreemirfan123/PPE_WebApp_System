@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 title: PPE Backend API
 emoji: 🦺
@@ -7,6 +8,8 @@ sdk: docker
 pinned: false
 ---
 
+=======
+>>>>>>> 757e645d77df9666317f4b32dd68ba7ef137265d
 # Real-Time AI-Powered PPE Compliance & Verification System
 
 This is a comprehensive, full-stack, real-time AI-Powered Personal Protective Equipment (PPE) Compliance and Violation Logging Web System. Built as a **Final Year Project (FYP)**, the system integrates a real-time computer vision detection pipeline with a robust FastAPI backend and an interactive Streamlit dashboard to automatically detect, log, and manage workplace safety violations.

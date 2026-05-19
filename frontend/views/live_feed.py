@@ -14,12 +14,20 @@ which is a plain generator — no threads, no subprocesses needed.
 
 import streamlit as st
 import tempfile
-import sys, os
-# Ensure project root is on sys.path so ml_pipeline is importable
-_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if _root not in sys.path:
-    sys.path.insert(0, _root)
+import sys
+import os
 import time
+
+# Fix import paths
+_frontend_dir = os.path.dirname(os.path.abspath(__file__))
+_frontend_parent = os.path.dirname(_frontend_dir)
+_project_root = os.path.dirname(_frontend_parent)
+
+if _frontend_parent not in sys.path:
+    sys.path.insert(0, _frontend_parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
 from utils import api_client
 
 

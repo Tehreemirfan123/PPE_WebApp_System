@@ -3,7 +3,16 @@ Worker Management Page — Admin only
 Add, update, remove workers and upload face photos.
 """
 
+import sys
+import os
 import streamlit as st
+
+# Fix import paths
+_frontend_dir = os.path.dirname(os.path.abspath(__file__))
+_frontend_parent = os.path.dirname(_frontend_dir)
+if _frontend_parent not in sys.path:
+    sys.path.insert(0, _frontend_parent)
+
 from utils import api_client
 
 
