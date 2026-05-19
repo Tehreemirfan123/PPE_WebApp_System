@@ -4,6 +4,8 @@ import sys
 from backend_client import BackendClient
 from compliance import ComplianceLogic
 from model_loader import ModelLoader
+from face_module import FaceRecognizer, process_faces, match_person_to_face
+from backend.database import SessionLocal
 
 def load_config(path="ml_pipeline/config.yaml"):
     with open(path) as f:
@@ -25,6 +27,10 @@ def run():
     
     if not required_ppe:
         print("[WARN] No required PPE found for this site. Ensure the site exists and is configured in the backend.")
+    
+    # ─── INITIALIZE FACE RECOGNITION CACHE ────────────────────────────────────
+    print("[INFO] Initializing Face Recognition Database Cache...")
+    face_recognizer = FaceRecognizer(db_session_factory=SessionLocal)
     
     # Initialize ML models and compliance logic
     print("[INFO] Loading models...")
@@ -69,14 +75,20 @@ def run():
         
         frame_count += 1
         
-        # Check if we should run heavy YOLO inference on this frame
+        # Check if we should run heavy YOLO & Face inference on this frame
         should_process = (frame_count % skip_frames == 0) or (frame_count == 1)
         
         if should_process:
-            # 1. Detect Persons
+            # Convert frame to RGB once (DeepFace and YOLO handle RGB inputs best)
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # ─── STEP 1: DETECT AND IDENTIFY FACES ────────────────────────────
+            face_locations, face_names = process_faces(frame_rgb, face_recognizer)
+            
+            # 2. Detect Persons
             persons = models.detect_persons(frame)
             
-            # 2. Detect all PPE at once (huge performance optimization!)
+            # 3. Detect all PPE at once
             all_ppe = models.detect_all_ppe(frame)
             
             # ─── Dynamic Site Inference (Optional) ───
@@ -136,6 +148,9 @@ def run():
                 if avg_conf > highest_conf:
                     highest_conf = avg_conf
                 
+                # ─── STEP 2: MATCH PERSON TO RECOGNIZED FACE ──────────────────
+                worker_identity = match_person_to_face(bbox, face_locations, face_names)
+                
                 # Retrieve mapped PPE detections for this person
                 detections = person_detections[track_id]
                 
@@ -151,18 +166,28 @@ def run():
                 
                 # Draw bounding boxes and labels for the UI and saved frame
                 x1, y1, x2, y2 = bbox
-                # Visuals show instantaneous (current frame) violations immediately!
                 color = (0, 0, 255) if missing else (0, 255, 0)
                 cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
                 
-                label = None
+                # ─── STEP 3: UPDATE BOUNDING BOX LABELS ───────────────────────
+                # Build a unified label containing worker name (if found) and track metadata
+                identity_str = f"[{worker_identity}] " if worker_identity != "Unknown Worker" else ""
+                
                 if missing:
-                    label = f"ID:{track_id} " + ", ".join(missing[:2])
+                    label = f"{identity_str}ID:{track_id} " + ", ".join(missing[:2])
                     cv2.putText(frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
                     
-                    # Collect violations to log to DB (all final_violations)
+                    # Collect violations to log to DB
                     if final_violations:
                         frame_violations_to_log.extend(final_violations)
+                else:
+                    # If they are fully compliant, still show their name above the green box!
+                    if worker_identity != "Unknown Worker":
+                        label = worker_identity
+                        cv2.putText(frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    else:
+                        label = f"ID:{track_id}"
+                        cv2.putText(frame, label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
                         
                 # Add to drawing cache
                 cached_drawing_actions.append({
@@ -191,15 +216,14 @@ def run():
                 x1, y1, x2, y2 = action["bbox"]
                 cv2.rectangle(frame, (x1, y1), (x2, y2), action["color"], 2)
                 if action["label"]:
-                    cv2.putText(frame, action["label"], (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                    # Keep color matching the original cached alert state
+                    cv2.putText(frame, action["label"], (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, action["color"], 2)
 
         # 3. Display the frame
         if config.get("show_display", True):
-            # Add statistics on the frame
             stats_text = f"Frame: {frame_count} | Logged: {violations_logged} | Images: {images_saved}"
             cv2.putText(frame, stats_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
-            # Resize frame for display if it's too large
             h, w = frame.shape[:2]
             if w > 1280:
                 scale = 1280 / w
