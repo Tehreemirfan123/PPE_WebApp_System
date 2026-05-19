@@ -1,0 +1,7 @@
+ml_pipeline/models/
+ml_pipeline/test_videos/
+venv/
+.venv/
+__pycache__/
+*.pt
+*.mp4
