@@ -7,6 +7,7 @@ import pandas as pd
 from datetime import date, timedelta
 from utils import api_client
 import requests
+import base64
 
 def handle_resolve_violation(violation_id):
     """Callback function to handle API resolution logic before page re-rendering."""
@@ -92,17 +93,21 @@ def render():
             with img_col:
                 img_path = v.get("image_path")
                 if img_path:
-                    # Try loading from API static endpoint
-                    filename = img_path.split("/")[-1].split("\\")[-1]
-                    img_url  = f"http://localhost:8000/images/{filename}"
-                    try:
-                        resp = requests.get(img_url, timeout=5)
-                        if resp.status_code == 200:
-                            st.image(resp.content, width="stretch", caption="Violation Frame")
-                        else:
+                    if img_path.startswith("data:image"):
+                        image_bytes = base64.b64decode(img_path.split(",", 1)[1])
+                        st.image(image_bytes, width="stretch", caption="Violation Frame")
+                    else:
+                        # Backward-compatible path for older records that only stored a filename.
+                        filename = img_path.split("/")[-1].split("\\")[-1]
+                        img_url  = f"{api_client.BASE_URL}/images/{filename}"
+                        try:
+                            resp = requests.get(img_url, timeout=5)
+                            if resp.status_code == 200:
+                                st.image(resp.content, width="stretch", caption="Violation Frame")
+                            else:
+                                st.image("https://via.placeholder.com/300x200?text=No+Image", width="stretch")
+                        except:
                             st.image("https://via.placeholder.com/300x200?text=No+Image", width="stretch")
-                    except:
-                        st.image("https://via.placeholder.com/300x200?text=No+Image", width="stretch")
                 else:
                     st.markdown("""
                     <div style='height:150px;background:#334155;border-radius:8px;
@@ -144,12 +149,6 @@ def render():
                         st.success(st.session_state.pop(f"msg_success_{v['id']}"))
                     if f"msg_error_{v['id']}" in st.session_state:
                         st.error(st.session_state.pop(f"msg_error_{v['id']}"))
-                        try:
-                            api_client.resolve_violation(v["id"])
-                            st.success("Violation marked as resolved!")
-                            st.rerun()
-                        except Exception as ex:
-                            st.error(f"Failed to resolve: {ex}")
                 else:
                     resolved_at = v.get("resolved_at", "")
                     if resolved_at:

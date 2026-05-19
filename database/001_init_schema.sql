@@ -32,10 +32,10 @@ CREATE TABLE IF NOT EXISTS sites (
     created_at  TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
 
--- Soft delete site
-UPDATE sites
-SET is_active = FALSE
-WHERE id = <site_id>;
+-- Soft delete site example:
+-- UPDATE sites
+-- SET is_active = FALSE
+-- WHERE id = 1;
 
 -- ─────────────────────────────────────────────────────────────
 --  SITE_REQUIREMENTS  (which PPE items are required per site)
@@ -76,11 +76,11 @@ CREATE TABLE IF NOT EXISTS workers (
     updated_at      TIMESTAMPTZ         NOT NULL DEFAULT NOW()
 );
 
--- Soft delete worker
-UPDATE workers
-SET is_active = FALSE,
-    updated_at = NOW()
-WHERE id = <worker_id>;
+-- Soft delete worker example:
+-- UPDATE workers
+-- SET is_active = FALSE,
+--     updated_at = NOW()
+-- WHERE id = 1;
 
 -- Index for fast cosine similarity search
 CREATE INDEX IF NOT EXISTS workers_face_embedding_idx
@@ -90,7 +90,12 @@ CREATE INDEX IF NOT EXISTS workers_face_embedding_idx
 -- ─────────────────────────────────────────────────────────────
 --  DETECTION_EVENTS  (one row per violation event — NOT every frame)
 -- ─────────────────────────────────────────────────────────────
-CREATE TYPE detection_status AS ENUM ('open', 'resolved');
+DO $$
+BEGIN
+    CREATE TYPE detection_status AS ENUM ('open', 'resolved');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS detection_events (
     id              SERIAL PRIMARY KEY,

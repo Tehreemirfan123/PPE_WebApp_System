@@ -7,7 +7,9 @@ import requests
 import streamlit as st
 from typing import Optional, Dict, Any
 
-BASE_URL = "http://127.0.0.1:8000"
+import os
+
+BASE_URL = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
 # ─────────────────────────────────────────────────────────────
