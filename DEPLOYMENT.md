@@ -1,20 +1,20 @@
 # PPE Web App Deployment Guide
 
-This guide deploys this exact project with free tiers and no card details:
+This guide uses services that can be used without adding card details:
 
 - Database: Supabase Free PostgreSQL
-- Backend API: Render Free Web Service
+- Backend API: Hugging Face Spaces with Docker
 - Dashboard: Streamlit Community Cloud
 - ML pipeline: runs locally on your laptop/PC and sends events to the cloud API
 
 Important free-tier notes:
 
-- Render Free web services sleep after inactivity and can take about a minute to wake up.
-- Render Free does not provide persistent disks. This project stores violation frame previews inside the database as compressed base64 strings for demo/FYP use.
-- Supabase Free has a 500 MB database limit and can pause after inactivity. If you generate many violations, delete old rows from `violations` and `detection_events`.
-- Do not deploy this as a real production safety system on free tiers.
+- Hugging Face Spaces free CPU apps can sleep or restart after inactivity.
+- Supabase Free has storage limits. This project stores new violation frames as compressed base64 strings in the database for FYP/demo use.
+- The YOLO/OpenVINO ML pipeline should stay local. Do not deploy the ML pipeline to Hugging Face or Streamlit Cloud.
+- This is suitable for a final-year-project demo, not a paid production safety system.
 
-## Phase 0: Check And Push Your Code To GitHub
+## Phase 0: Push Your Latest Code To GitHub
 
 Open PowerShell.
 
@@ -24,23 +24,22 @@ Go to your project folder:
 cd "c:\Users\Tehreem Irfan\Documents\Final Year Project\PPE_WebApp_System"
 ```
 
-Check your Git branch and changed files:
+Check changed files:
 
 ```powershell
-git branch --show-current
 git status
 ```
 
-You should be on `main`. Add all deployment files:
+Add all deployment changes:
 
 ```powershell
 git add .
 ```
 
-Commit them:
+Commit:
 
 ```powershell
-git commit -m "Prepare PPE web app for free cloud deployment"
+git commit -m "Prepare Hugging Face backend deployment"
 ```
 
 Push to GitHub:
@@ -49,166 +48,255 @@ Push to GitHub:
 git push origin main
 ```
 
-Open your browser and go to:
+Open this in your browser:
 
 ```text
 https://github.com/Tehreemirfan123/PPE_WebApp_System
 ```
 
-Confirm these files are visible in GitHub:
+Confirm these files exist:
 
-- `backend.Dockerfile`
+- `Dockerfile`
+- `.dockerignore`
 - `requirements-backend.txt`
 - `frontend/requirements.txt`
+- `backend/main.py`
 - `database/001_init_schema.sql`
 - `database/002_seed_defaults.sql`
-- `frontend/app.py`
-- `ml_pipeline/config.yaml`
 
-## Phase 1: Create Supabase Database
+## Phase 1: Supabase Database
+
+You already completed this if both SQL files showed:
+
+```text
+Success. No rows returned
+```
+
+The database setup order is:
+
+1. Run `database/001_init_schema.sql`
+2. Run `database/002_seed_defaults.sql`
+
+Default logins after seeding:
+
+```text
+Admin: admin@ppe.com / admin123
+Officer: officer@ppe.com / officer123
+```
+
+Now copy your Supabase PostgreSQL connection URL:
+
+1. Open Supabase.
+2. Open your project.
+3. Click the gear icon for `Project Settings`.
+4. Click `Database`.
+5. Find `Connection string`.
+6. Choose the URI / pooler connection string.
+7. Copy it.
+8. Replace `[YOUR-PASSWORD]` with your real database password.
+
+It should look similar to:
+
+```text
+postgresql://postgres.xxxxx:YOUR_REAL_PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres
+```
+
+If your copied URL does not already end with query settings, add SSL mode at the end:
+
+```text
+?sslmode=require
+```
+
+Final example:
+
+```text
+postgresql://postgres.xxxxx:YOUR_REAL_PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres?sslmode=require
+```
+
+Save this URL. You will use it as `DATABASE_URL`.
+
+## Phase 2: Deploy Backend API On Hugging Face Spaces
 
 Open your browser and go to:
 
 ```text
-https://supabase.com
+https://huggingface.co
 ```
 
-Sign in with GitHub.
+Create an account or sign in.
 
-Click `New project`.
+### Create The Backend Space
 
-Use these values:
+Click your profile picture in the top-right.
 
-- Project name: `ppe-database`
-- Database password: click generate, then copy and save it
-- Region: choose the closest free region to you
-- Plan: Free
+Click `New Space`.
 
-Click `Create new project`.
-
-Wait until the project finishes provisioning.
-
-### Run The Schema
-
-In Supabase, open the left sidebar and click `SQL Editor`.
-
-Click `New query`.
-
-On your computer, open:
+Use these settings:
 
 ```text
-database/001_init_schema.sql
+Space name: ppe-backend-api
+License: MIT
+SDK: Docker
+Hardware: CPU basic / Free
+Visibility: Public
 ```
 
-Copy the full file contents.
+Click `Create Space`.
 
-Paste it into the Supabase SQL editor.
-
-Click `Run`.
-
-You should see a success message.
-
-### Run The Seed Data
-
-In the same Supabase SQL editor, delete the old query text.
-
-On your computer, open:
+Your backend URL will be:
 
 ```text
-database/002_seed_defaults.sql
+https://YOUR_HF_USERNAME-ppe-backend-api.hf.space
 ```
 
-Copy the full file contents.
+Replace `YOUR_HF_USERNAME` with your actual Hugging Face username.
 
-Paste it into Supabase.
-
-Click `Run`.
-
-This creates the default logins:
-
-- Admin: `admin@ppe.com` / `admin123`
-- Officer: `officer@ppe.com` / `officer123`
-
-### Copy The Database URL
-
-In Supabase, click the gear icon for `Project Settings`.
-
-Click `Database`.
-
-Find `Connection string`.
-
-Choose the URI / pooler connection string. It will look similar to:
+Example:
 
 ```text
-postgresql://postgres.xxxxx:[YOUR-PASSWORD]@aws-0-region.pooler.supabase.com:6543/postgres
+https://tehreemirfan-ppe-backend-api.hf.space
 ```
 
-Replace `[YOUR-PASSWORD]` with the password you saved.
+### Add Backend Secrets
 
-Save the final URL somewhere safe. You will paste it into Render.
+Inside your Hugging Face Space, click `Settings`.
 
-## Phase 2: Deploy The Backend API On Render
+Find `Variables and secrets`.
 
-Open your browser and go to:
+Add these as **secrets**:
 
 ```text
-https://render.com
+DATABASE_URL
 ```
 
-Sign in with GitHub.
-
-Click `New +`.
-
-Click `Web Service`.
-
-Choose `Build and deploy from a Git repository`.
-
-Connect this repository:
+Value:
 
 ```text
-Tehreemirfan123/PPE_WebApp_System
+paste your full Supabase PostgreSQL URI
 ```
 
-If Render asks for GitHub permission, click `Configure GitHub App`, allow access to this repository, then return to Render.
-
-Use these service settings:
-
-- Name: `ppe-backend-api`
-- Language / Runtime: Docker
-- Branch: `main`
-- Dockerfile path: `backend.Dockerfile`
-- Instance type: Free
-
-Do not add a disk. Disks are not available on Render Free.
-
-Open the advanced/environment variables section.
-
-Add these environment variables:
+Add:
 
 ```text
-DATABASE_URL=<paste your Supabase PostgreSQL URI here>
-SECRET_KEY=<paste a long random secret here>
-BACKEND_URL=https://ppe-backend-api.onrender.com
-SAVED_VIOLATIONS_DIR=/tmp/saved_violations
-PORT=8000
+SECRET_KEY
 ```
 
-To generate a secure `SECRET_KEY`, run this in PowerShell:
+Generate it in PowerShell:
 
 ```powershell
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-Copy the output and use it as `SECRET_KEY`.
+Paste the generated output as the value.
 
-Click `Create Web Service`.
-
-Wait for Render to build and deploy. It can take several minutes.
-
-When the service is live, open this URL in your browser:
+Add:
 
 ```text
-https://ppe-backend-api.onrender.com/health
+BACKEND_URL
+```
+
+Value:
+
+```text
+https://YOUR_HF_USERNAME-ppe-backend-api.hf.space
+```
+
+Add:
+
+```text
+SAVED_VIOLATIONS_DIR
+```
+
+Value:
+
+```text
+/tmp/saved_violations
+```
+
+Add:
+
+```text
+PORT
+```
+
+Value:
+
+```text
+7860
+```
+
+### Push Your Code To The Hugging Face Space
+
+Hugging Face Spaces are Git repositories. You will push this project to the Space.
+
+In Hugging Face, open:
+
+```text
+https://huggingface.co/settings/tokens
+```
+
+Click `New token`.
+
+Use:
+
+```text
+Token name: ppe-space-deploy
+Role: Write
+```
+
+Create the token and copy it. Keep it private.
+
+In PowerShell, from your project folder:
+
+```powershell
+cd "c:\Users\Tehreem Irfan\Documents\Final Year Project\PPE_WebApp_System"
+```
+
+Add the Hugging Face Space as a Git remote. Replace `YOUR_HF_USERNAME`:
+
+```powershell
+git remote add hf https://huggingface.co/spaces/YOUR_HF_USERNAME/ppe-backend-api
+```
+
+If PowerShell says `remote hf already exists`, run this instead:
+
+```powershell
+git remote set-url hf https://huggingface.co/spaces/YOUR_HF_USERNAME/ppe-backend-api
+```
+
+Push your `main` branch to Hugging Face:
+
+```powershell
+git push hf main:main
+```
+
+If PowerShell asks for login:
+
+```text
+Username: your Hugging Face username
+Password: paste your Hugging Face write token
+```
+
+If the push is rejected because the new Space already created a README, and this is a brand-new empty Space, run:
+
+```powershell
+git push hf main:main --force
+```
+
+Only use that force command for this new Hugging Face Space. It does not force-push your GitHub repository.
+
+### Wait For Build
+
+Go back to your Hugging Face Space in the browser.
+
+Click `Logs`.
+
+Wait until the Docker build finishes.
+
+When it is running, open:
+
+```text
+https://YOUR_HF_USERNAME-ppe-backend-api.hf.space/health
 ```
 
 Expected response:
@@ -217,10 +305,10 @@ Expected response:
 {"status":"healthy"}
 ```
 
-Also test the root URL:
+Also open:
 
 ```text
-https://ppe-backend-api.onrender.com/
+https://YOUR_HF_USERNAME-ppe-backend-api.hf.space/
 ```
 
 Expected response:
@@ -229,9 +317,7 @@ Expected response:
 {"status":"ok","message":"PPE Detection System API is running"}
 ```
 
-If your Render URL is different, copy the actual URL and use that exact URL in the next phases.
-
-## Phase 3: Deploy The Streamlit Dashboard
+## Phase 3: Deploy Streamlit Dashboard
 
 Open your browser and go to:
 
@@ -247,43 +333,43 @@ Choose `Yup, I have an app`.
 
 Fill in:
 
-- Repository: `Tehreemirfan123/PPE_WebApp_System`
-- Branch: `main`
-- Main file path: `frontend/app.py`
-
-Open `Advanced settings`.
-
-In `Secrets`, paste this:
-
-```toml
-BACKEND_API_URL = "https://ppe-backend-api.onrender.com"
+```text
+Repository: Tehreemirfan123/PPE_WebApp_System
+Branch: main
+Main file path: frontend/app.py
 ```
 
-If Render gave you a different backend URL, use that instead.
+Click `Advanced settings`.
+
+In `Secrets`, paste this. Replace `YOUR_HF_USERNAME`:
+
+```toml
+BACKEND_API_URL = "https://YOUR_HF_USERNAME-ppe-backend-api.hf.space"
+```
 
 Click `Deploy`.
 
-Wait until Streamlit finishes installing dependencies and starts the app.
+Wait until Streamlit finishes installing dependencies.
 
 Open the Streamlit app URL.
 
-Log in with:
+Test login:
 
 ```text
 admin@ppe.com
 admin123
 ```
 
-Then also test:
+Then test:
 
 ```text
 officer@ppe.com
 officer123
 ```
 
-## Phase 4: Point The Local ML Pipeline To The Cloud Backend
+## Phase 4: Point Local ML Pipeline To The Cloud Backend
 
-This part stays on your own computer. Do not deploy the YOLO/OpenVINO pipeline to Render or Streamlit.
+This part stays on your computer.
 
 Open:
 
@@ -299,57 +385,46 @@ api_email:      admin@ppe.com
 api_password:   admin123
 ```
 
-Change it to:
+Change it to your Hugging Face backend URL:
 
 ```yaml
-api_base_url:   https://ppe-backend-api.onrender.com
+api_base_url:   https://YOUR_HF_USERNAME-ppe-backend-api.hf.space
 api_email:      admin@ppe.com
 api_password:   admin123
 ```
 
-Use your actual Render URL if it is different.
-
-Keep the demo video for first test:
+Keep this for first test:
 
 ```yaml
 video_source:   "ml_pipeline/test_videos/demo.mp4"
 ```
 
-Open PowerShell in the project root:
+Run the pipeline locally:
 
 ```powershell
 cd "c:\Users\Tehreem Irfan\Documents\Final Year Project\PPE_WebApp_System"
-```
-
-Activate your local virtual environment:
-
-```powershell
 .\venv\Scripts\activate
-```
-
-Run the pipeline:
-
-```powershell
 python ml_pipeline/main.py
 ```
 
-The pipeline should log in to the cloud backend and send violations to Supabase through Render.
+Refresh Streamlit and open `Violation Logs`.
 
-Refresh the Streamlit dashboard and open `Violation Logs`.
+New violations should appear in the cloud dashboard.
 
 ## Phase 5: Final Demo Checklist
 
-Before your FYP demo, check these in order:
+Check these in order:
 
-1. Supabase project is not paused.
-2. Render backend opens at `/health`.
-3. Streamlit dashboard opens and can log in.
-4. `Violation Logs` loads without backend connection errors.
-5. Local ML pipeline starts without authentication errors.
-6. A new violation appears in the dashboard after the pipeline runs.
-7. Violation frame image appears in the dashboard.
-8. Officer account can mark a violation as resolved.
-9. Admin account can manage sites and workers.
+1. Supabase project is active.
+2. Hugging Face backend opens at `/health`.
+3. Streamlit dashboard opens.
+4. Admin login works.
+5. Officer login works.
+6. Dashboard pages load without backend connection errors.
+7. Local ML pipeline authenticates successfully.
+8. New violation appears in `Violation Logs`.
+9. New violation frame image appears.
+10. Officer account can mark a violation as resolved.
 
 ## Useful Commands
 
@@ -359,12 +434,18 @@ Check changed files:
 git status
 ```
 
-Push future updates:
+Push updates to GitHub:
 
 ```powershell
 git add .
-git commit -m "Update deployment configuration"
+git commit -m "Update deployment files"
 git push origin main
+```
+
+Push updates to Hugging Face backend Space:
+
+```powershell
+git push hf main:main
 ```
 
 Run backend locally:
@@ -391,29 +472,36 @@ python ml_pipeline/main.py
 
 ## Troubleshooting
 
-If Render build fails:
+If Hugging Face build fails:
 
-- Open Render service logs.
-- Confirm Dockerfile path is exactly `backend.Dockerfile`.
-- Confirm `requirements-backend.txt` exists on GitHub.
+- Open Space `Logs`.
+- Confirm Space SDK is `Docker`.
+- Confirm `Dockerfile` exists at the repository root.
+- Confirm `requirements-backend.txt` exists.
 
 If backend says database connection failed:
 
-- Check `DATABASE_URL` in Render.
+- Check the `DATABASE_URL` secret in Hugging Face Space settings.
 - Make sure your Supabase password is inside the URL.
 - Make sure there are no square brackets around the password.
 
+If `/health` does not open:
+
+- Wait a few minutes and check Space logs.
+- Confirm `PORT` is set to `7860`.
+- Confirm the Space is running on free CPU hardware.
+
 If Streamlit cannot connect to backend:
 
-- Open the Streamlit app settings.
+- Open Streamlit app settings.
 - Check the secret name is exactly `BACKEND_API_URL`.
-- Make sure the URL starts with `https://`.
-- Open Render `/health` once to wake the backend.
+- Make sure it starts with `https://`.
+- Open the Hugging Face `/health` URL once to wake the backend.
 
 If violation images do not show:
 
-- Make sure you pushed the updated `ml_pipeline/backend_client.py`.
-- Run the local pipeline again after pulling the latest code.
+- Make sure `ml_pipeline/backend_client.py` is updated.
+- Run the local pipeline again.
 - Old records may only contain local filenames; new records should contain base64 image data.
 
 If Supabase SQL fails:
