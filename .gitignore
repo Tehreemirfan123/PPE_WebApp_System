@@ -42,6 +42,9 @@ saved_violations/*
 # OpenVINO model weights (large binary files)
 ml_pipeline/models/**/*.bin
 
+# Worker Facial Data
+known_faces/
+
 # Testing & IDE Caches
 .pytest_cache/
 .DS_Store
