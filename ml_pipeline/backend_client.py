@@ -1,7 +1,7 @@
 import requests
 import datetime
 import cv2
-import os
+import base64
 from pathlib import Path
 
 class BackendClient:
@@ -77,12 +77,18 @@ class BackendClient:
         cv2.imwrite(str(img_path), frame)
         print(f"[SAVED IMAGE] {img_filename}")
 
+        encoded_ok, encoded_img = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        image_ref = img_filename
+        if encoded_ok:
+            image_b64 = base64.b64encode(encoded_img).decode("ascii")
+            image_ref = f"data:image/jpeg;base64,{image_b64}"
+
         # 2. POST detection event
         event_payload = {
             "camera_name": self.config["camera_name"],
             "site_name":   self.config["site_name"],
             "detected_by": "yolov8m",
-            "image_path":  img_filename,  # Only filename if saved, None otherwise
+            "image_path":  image_ref,
             "confidence_score": conf,
             "detected_ppe": [],
             "missing_ppe":  missing_items,
