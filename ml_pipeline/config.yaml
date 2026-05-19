@@ -1,16 +1,27 @@
 # ── Models ─────────────────────────────────────────────────────────────────────
-person_model:   models/yolov8n.pt
-ppe_model:      ml_pipeline/models/ppe_yolov8m_best.pt
+# Switch between PyTorch (.pt) and OpenVINO (folder) by changing the path.
+# OpenVINO folders give faster CPU inference — use them in production.
+
+# PyTorch (original):
+# person_model: models/yolov8n.pt
+# ppe_model:    ml_pipeline/models/ppe_yolov8m_best.pt
+
+# OpenVINO:
+person_model:   ml_pipeline/models/person_model_openvino
+ppe_model:      ml_pipeline/models/ppe_detection_openvino
+
+# ── Data / Labels ──────────────────────────────────────────────────────────────
+data_yaml:      ml_pipeline/data.yaml
 
 # ── Confidence Thresholds ──────────────────────────────────────────────────────
-person_conf:    0.5           # minimum confidence for person detection
-ppe_conf:       0.5           # minimum confidence to accept a PPE detection
-alert_conf:     0.6           # minimum confidence to trigger a violation alert
+person_conf:    0.5
+ppe_conf:       0.5
+alert_conf:     0.6
 
 # ── Temporal Smoothing & Cooldown ──────────────────────────────────────────────
-temporal_frames: 5            # violation must persist for N frames before logging
-cooldown_seconds: 15          # wait N seconds before logging the exact same violation again
-auto_detect_site: true        # infer site type (Chemical Lab/Factory) from detections
+temporal_frames:  5
+cooldown_seconds: 15
+auto_detect_site: true
 
 # ── Backend API ────────────────────────────────────────────────────────────────
 api_base_url:   http://127.0.0.1:8000
@@ -22,9 +33,14 @@ site_name:      "Construction Site"
 camera_name:    "Camera 1"
 
 # ── Video Sources ──────────────────────────────────────────────────────────────
+# For the CLI pipeline (ml_pipeline/main.py).
+# The Streamlit Live Monitor page manages its own source via the UI.
+#   0        → default webcam
+#   1, 2 ... → other USB cameras
+#   "path/to/file.mp4" → video file
 video_source:   "ml_pipeline/test_videos/demo.mp4"
 
 # ── Output ─────────────────────────────────────────────────────────────────────
-saved_violations_dir: ./saved_violations  # Relative to the script running dir (root)
-show_display:   true          # show OpenCV window during testing
-skip_frames:    4             # process every Nth frame to achieve real-time speed
+saved_violations_dir: ./saved_violations
+show_display:   true
+skip_frames:    4

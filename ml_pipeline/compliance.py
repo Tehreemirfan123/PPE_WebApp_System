@@ -97,6 +97,14 @@ class ComplianceLogic:
         """
         Returns list of missing PPE items (violations) based on site policy.
         required_ppe: e.g. ["hardhat", "safety_vest", "gloves"]
+
+        A required item is a VIOLATION if:
+          1. Its explicit "no_<item>" label was detected on this person, OR
+          2. Neither the compliant nor the violation label was detected at all
+             (the model saw no evidence of the item being worn).
+
+        A required item is COMPLIANT only if the positive label (e.g. "hardhat")
+        was detected intersecting this person's bounding box.
         """
         # Map database taxonomy to YOLO taxonomy
         db_to_yolo = {
@@ -104,15 +112,28 @@ class ComplianceLogic:
             "boots": "safety_shoes",
             "lab_coat": "labcoat"
         }
-        
+
         translated_required = [db_to_yolo.get(item, item) for item in required_ppe]
-        
-        violation_names = {d["class_name"] for d in detections if d["is_violation"] and d["conf"] >= self.alert_conf}
+
+        # Build sets of what was seen on this person (already filtered by bbox overlap)
+        compliant_names = {
+            d["class_name"] for d in detections
+            if not d["is_violation"] and d["conf"] >= self.alert_conf
+        }
+        violation_names = {
+            d["class_name"] for d in detections
+            if d["is_violation"] and d["conf"] >= self.alert_conf
+        }
+
         missing = []
         for item in translated_required:
-            # Look for the exact "no_item" equivalent based on taxonomy
             violation_str = f"no_{item}"
             if violation_str in violation_names:
+                # Explicit "no_<item>" detected → definite violation
+                missing.append(violation_str)
+            elif item not in compliant_names:
+                # Neither the PPE nor its "no_" counterpart was detected →
+                # treat as missing (item not visible on this person)
                 missing.append(violation_str)
         return missing
 

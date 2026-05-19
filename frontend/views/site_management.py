@@ -50,8 +50,8 @@ def render():
                     new_desc  = st.text_area("Description",  value=site.get("description") or "", height=80)
                     new_reqs  = st.multiselect("Required PPE Items", ALL_PPE_ITEMS, default=reqs)
                     col_save, col_del = st.columns(2)
-                    save_btn = col_save.form_submit_button("💾 Save Changes", use_container_width=True)
-                    del_btn  = col_del.form_submit_button("🗑️ Delete Site",  use_container_width=True, type="primary")
+                    save_btn = col_save.form_submit_button("💾 Save Changes", width="stretch")
+                    del_btn  = col_del.form_submit_button("🗑️ Delete Site",  width="stretch", type="primary")
 
                 if save_btn:
                     try:
@@ -84,7 +84,7 @@ def render():
             desc = st.text_area("Description",  placeholder="Brief description...", height=90)
             reqs = st.multiselect("Required PPE Items", ALL_PPE_ITEMS)
 
-        submitted = st.form_submit_button("➕ Create Site", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("➕ Create Site", type="primary", width="stretch")
 
     if submitted:
         if not name.strip():

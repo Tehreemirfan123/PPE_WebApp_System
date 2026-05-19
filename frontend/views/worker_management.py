@@ -63,8 +63,8 @@ def render():
                     new_site  = st.selectbox("Site", site_opts, index=site_opts.index(cur_site) if cur_site in site_opts else 0)
                     new_active = st.checkbox("Active", value=w["is_active"])
                     col_save, col_del = st.columns(2)
-                    save_btn = col_save.form_submit_button("💾 Save", use_container_width=True)
-                    del_btn  = col_del.form_submit_button("🗑️ Remove Worker", use_container_width=True, type="primary")
+                    save_btn = col_save.form_submit_button("💾 Save", width="stretch")
+                    del_btn  = col_del.form_submit_button("🗑️ Remove Worker", width="stretch", type="primary")
 
                 if save_btn:
                     try:
@@ -100,7 +100,7 @@ def render():
             site_opts = ["Unassigned"] + site_names
             sel_site = st.selectbox("Assigned Site", site_opts)
 
-        submitted = st.form_submit_button("➕ Register Worker", type="primary", use_container_width=True)
+        submitted = st.form_submit_button("➕ Register Worker", type="primary", width="stretch")
 
     if submitted:
         if not emp_id.strip() or not name.strip():

@@ -8,6 +8,24 @@ from datetime import date, timedelta
 from utils import api_client
 import requests
 
+def handle_resolve_violation(violation_id):
+    """Callback function to handle API resolution logic before page re-rendering."""
+    import requests  # Imported to catch the explicit HTTP error signature
+    
+    try:
+        from utils import api_client
+        api_client.resolve_violation(violation_id)
+        st.session_state[f"msg_success_{violation_id}"] = f"Violation #{violation_id} marked as resolved!"
+    
+    except requests.exceptions.HTTPError as http_err:
+        # Check if the backend responded with a 403 Forbidden status code
+        if http_err.response is not None and http_err.response.status_code == 403:
+            st.session_state[f"msg_error_{violation_id}"] = "🚫 Action Denied: Violations can only be resolved by a Security Officer."
+        else:
+            st.session_state[f"msg_error_{violation_id}"] = f"Server Error: {http_err}"
+            
+    except Exception as ex:
+        st.session_state[f"msg_error_{violation_id}"] = f"Failed to resolve: {ex}"
 
 def render():
     st.markdown("## ⚠️Violations Logs")
@@ -34,7 +52,7 @@ def render():
             date_to   = st.date_input("To",   value=date.today())
         with f5:
             st.markdown("<br>", unsafe_allow_html=True)
-            refresh_btn = st.button("🔄 Refresh", use_container_width=True)
+            refresh_btn = st.button("🔄 Refresh", width="stretch")
 
     site_name = sel_site if sel_site != "All" else None
     status    = sel_status if sel_status != "All" else None
@@ -80,11 +98,11 @@ def render():
                     try:
                         resp = requests.get(img_url, timeout=5)
                         if resp.status_code == 200:
-                            st.image(resp.content, use_column_width=True, caption="Violation Frame")
+                            st.image(resp.content, width="stretch", caption="Violation Frame")
                         else:
-                            st.image("https://via.placeholder.com/300x200?text=No+Image", use_column_width=True)
+                            st.image("https://via.placeholder.com/300x200?text=No+Image", width="stretch")
                     except:
-                        st.image("https://via.placeholder.com/300x200?text=No+Image", use_column_width=True)
+                        st.image("https://via.placeholder.com/300x200?text=No+Image", width="stretch")
                 else:
                     st.markdown("""
                     <div style='height:150px;background:#334155;border-radius:8px;
@@ -109,7 +127,23 @@ def render():
                 """, unsafe_allow_html=True)
 
                 if v["status"] == "open":
-                    if st.button(f"✅ Mark Resolved", key=f"resolve_{v['id']}"):
+                    # Proactively check if the user has the authority to run this action
+                    if st.session_state.get("role") == "security_officer":
+                        st.button(
+                            f"✅ Mark Resolved", 
+                            key=f"resolve_{v['id']}",
+                            on_click=handle_resolve_violation,
+                            args=(v["id"],)
+                        )
+                    else:
+                        # Display a clean, locked indicator instead of a button they can't use
+                        st.markdown("🔒 *Only Security Officers can resolve violations*")
+
+                    # Display status notifications safely above or below the record card
+                    if f"msg_success_{v['id']}" in st.session_state:
+                        st.success(st.session_state.pop(f"msg_success_{v['id']}"))
+                    if f"msg_error_{v['id']}" in st.session_state:
+                        st.error(st.session_state.pop(f"msg_error_{v['id']}"))
                         try:
                             api_client.resolve_violation(v["id"])
                             st.success("Violation marked as resolved!")
